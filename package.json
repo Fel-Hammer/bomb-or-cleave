@@ -1,5 +1,6 @@
 {
   "name": "bomb-or-cleave",
+  "packageManager": "pnpm@9.4.0",
   "private": true,
   "sideEffects": false,
   "type": "module",
