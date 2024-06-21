@@ -18,6 +18,7 @@ import type {
   HeadersArgs,
   LinksFunction,
   LoaderFunctionArgs,
+  MetaFunction,
 } from "@vercel/remix";
 import { json } from "@vercel/remix";
 import type { ReactNode } from "react";
@@ -112,6 +113,35 @@ export async function loader({ request }: LoaderFunctionArgs) {
     },
   );
 }
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: siteConfig.title },
+    { property: "og:url", content: siteConfig.url },
+    { property: "twitter:url", content: siteConfig.url },
+    { property: "image:alt", content: siteConfig.title },
+    { property: "og:type", content: "website" },
+    { property: "og:title", content: siteConfig.title },
+    { property: "og:site_name", content: siteConfig.title },
+    { property: "og:locale", content: "en_US" },
+    { property: "og:image", content: siteConfig.ogImage },
+    { property: "og:image:alt", content: siteConfig.title },
+    { property: "og:description", content: siteConfig.description },
+    { property: "twitter:description", content: siteConfig.description },
+    { property: "twitter:creator", content: "@ToppleTheNun" },
+    { property: "twitter:title", content: siteConfig.title },
+    { property: "twitter:image", content: siteConfig.ogImage },
+    { property: "twitter:image:alt", content: siteConfig.title },
+    { property: "twitter:card", content: "summary" },
+    { property: "description", content: siteConfig.description },
+    { property: "name", content: siteConfig.title },
+    { property: "author", content: "Richard Harrah" },
+    { property: "revisit-after", content: "7days" },
+    { property: "distribution", content: "global" },
+    { property: "msapplication-TileColor", content: "#da532c" },
+    { property: "theme-color", content: "#ffffff" },
+  ];
+};
 
 export function headers({ loaderHeaders }: HeadersArgs) {
   return {
@@ -331,7 +361,7 @@ function App() {
               </a>
               . The source code is available on{" "}
               <a
-                href={siteConfig.links.github}
+                href={`${siteConfig.links.github}/tree/${ENV.COMMIT_SHA}`}
                 target="_blank"
                 rel="noreferrer"
                 className="font-medium underline underline-offset-4"
