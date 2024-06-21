@@ -12,6 +12,7 @@ import {
   useFetchers,
   useLoaderData,
 } from "@remix-run/react";
+import { Analytics } from "@vercel/analytics/react";
 import type {
   ActionFunctionArgs,
   HeadersArgs,
@@ -169,6 +170,7 @@ function Document({
         <ScrollRestoration nonce={nonce} />
         <TailwindIndicator />
         <Scripts nonce={nonce} />
+        <Analytics />
       </body>
     </html>
   );
