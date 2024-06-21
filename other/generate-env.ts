@@ -13,11 +13,11 @@ export const generated = {
 `;
 
 async function ensureDir(path: string) {
-    try {
-        await access(path);
-    } catch (e) {
-        await mkdir(path);
-    }
+  try {
+    await access(path);
+  } catch (e) {
+    await mkdir(path);
+  }
 }
 
 const pathToEnv = join(process.cwd(), "app", "generated");

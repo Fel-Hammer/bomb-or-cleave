@@ -6,27 +6,27 @@ import { type TypeOf, z } from "zod";
 import { generated } from "~/generated/env.ts";
 
 const schema = z.object({
-    NODE_ENV: z.enum(["production", "development", "test"] as const),
+  NODE_ENV: z.enum(["production", "development", "test"] as const),
 });
 
 declare global {
-    // eslint-disable-next-line @typescript-eslint/no-namespace
-    namespace NodeJS {
-        interface ProcessEnv extends TypeOf<typeof schema> {}
-    }
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace NodeJS {
+    interface ProcessEnv extends TypeOf<typeof schema> {}
+  }
 }
 
 export function init() {
-    const parsed = schema.safeParse({ ...process.env, ...generated });
+  const parsed = schema.safeParse({ ...process.env, ...generated });
 
-    if (!parsed.success) {
-        console.error(
-            "❌ Invalid environment variables:",
-            parsed.error.flatten().fieldErrors,
-        );
+  if (!parsed.success) {
+    console.error(
+      "❌ Invalid environment variables:",
+      parsed.error.flatten().fieldErrors,
+    );
 
-        throw new Error("Invalid environment variables");
-    }
+    throw new Error("Invalid environment variables");
+  }
 }
 
 /**
@@ -39,20 +39,20 @@ export function init() {
  * @returns all public ENV variables
  */
 export function getEnv() {
-    return {
-        MODE: process.env.NODE_ENV,
-        BUILD_TIME: generated.BUILD_TIME,
-        BUILD_TIMESTAMP: generated.BUILD_TIMESTAMP,
-        COMMIT_SHA: generated.COMMIT_SHA,
-    };
+  return {
+    MODE: process.env.NODE_ENV,
+    BUILD_TIME: generated.BUILD_TIME,
+    BUILD_TIMESTAMP: generated.BUILD_TIMESTAMP,
+    COMMIT_SHA: generated.COMMIT_SHA,
+  };
 }
 
 type ENV = ReturnType<typeof getEnv>;
 
 declare global {
-    // eslint-disable-next-line no-var
-    var ENV: ENV;
-    interface Window {
-        ENV: ENV;
-    }
+  // eslint-disable-next-line no-var
+  var ENV: ENV;
+  interface Window {
+    ENV: ENV;
+  }
 }
