@@ -11,6 +11,7 @@ import {
   useFetcher,
   useFetchers,
   useLoaderData,
+  useMatches,
 } from "@remix-run/react";
 import { Analytics } from "@vercel/analytics/react";
 import type {
@@ -37,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu.tsx";
 import { href as iconsHref, Icon } from "~/components/ui/icon.tsx";
+import { SeasonSwitcher } from "~/components/ui/SeasonSwitcher.tsx";
 import { siteConfig } from "~/config/site.ts";
 import { ClientHintCheck, getHints, useHints } from "~/lib/client-hints.tsx";
 import { serverTiming, setCookie } from "~/lib/constants.ts";
@@ -313,6 +315,11 @@ function App() {
   const data = useLoaderData<typeof loader>();
   const nonce = useNonce();
   const theme = useTheme();
+  const matches = useMatches();
+
+  const isOnSeasonPage = isPresent(
+    matches.find((m) => m.id === "routes/season+/$season"),
+  );
 
   return (
     <Document nonce={nonce} env={data.ENV} theme={theme}>
@@ -322,6 +329,7 @@ function App() {
             <MainNav />
             <MobileNav />
             <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+              {isOnSeasonPage ? <SeasonSwitcher /> : null}
               <nav className="flex items-center">
                 <NavLink
                   to={siteConfig.links.github}

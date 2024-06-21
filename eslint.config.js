@@ -263,7 +263,7 @@ export default tseslint.config(
       "vite.config.ts",
       "app/root.tsx",
       "app/entry.server.tsx",
-      "app/routes/*.tsx",
+      "app/routes/**/*.tsx",
       "other/**/*.ts",
     ],
     rules: {
