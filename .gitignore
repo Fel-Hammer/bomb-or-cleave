@@ -17,3 +17,5 @@ node_modules
 app/generated
 
 app/components/ui/icons
+
+.vercel

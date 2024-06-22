@@ -383,7 +383,9 @@ export interface EfficiencyTable {
 }
 
 export interface EnhancedSeason extends Season {
-  efficiencyTables: EfficiencyTable[];
+  baselineEfficiencyTable: EfficiencyTable;
+  baselineSoulCleaveApRatio: EfficientMultiplierResult;
+  baselineSpiritBombApRatios: EfficientSpiritBombMultiplierResult[];
 }
 
 function getSoulCleaveBaseApRatio(season: Season): EfficientMultiplierResult {
@@ -454,8 +456,7 @@ function getSpiritBombBaseApRatios(
 }
 
 function getSoulCleaveApRatio(
-  season: Season,
-  soulCleaveBaseApRatio: EfficientMultiplierResult,
+  season: EnhancedSeason,
   multipliers: AbilityMultiplier[],
 ): EfficientMultiplierResult {
   const result = multipliers.reduce<MultiplierResult>(
@@ -466,7 +467,7 @@ function getSoulCleaveApRatio(
         abilityMultiplierAppliedName(multiplier),
       ],
     }),
-    soulCleaveBaseApRatio,
+    season.baselineSoulCleaveApRatio,
   );
 
   return {
@@ -476,11 +477,10 @@ function getSoulCleaveApRatio(
 }
 
 function getSpiritBombApRatios(
-  season: Season,
-  spiritBombBaseApRatios: EfficientSpiritBombMultiplierResult[],
+  season: EnhancedSeason,
   multipliers: AbilityMultiplier[],
 ): EfficientSpiritBombMultiplierResult[] {
-  return spiritBombBaseApRatios.map((spiritBombBaseApRatio) => {
+  return season.baselineSpiritBombApRatios.map((spiritBombBaseApRatio) => {
     const result = multipliers.reduce<SpiritBombMultiplierResult>(
       (acc, multiplier) => ({
         value: acc.value * multiplier.value,
@@ -500,11 +500,7 @@ function getSpiritBombApRatios(
   });
 }
 
-function getEfficiencyTables(
-  season: Season,
-  soulCleaveBaseApRatio: EfficientMultiplierResult,
-  spiritBombBaseApRatios: EfficientSpiritBombMultiplierResult[],
-): EfficiencyTable[] {
+export function getEfficiencyTables(season: EnhancedSeason): EfficiencyTable[] {
   return fastCartesian(
     season.conditionalMultipliers.map<AbilityMultiplier[]>((multiplier) => [
       {
@@ -525,7 +521,6 @@ function getEfficiencyTables(
     conditionalMultipliers: combo,
     soulCleaveApRatio: getSoulCleaveApRatio(
       season,
-      soulCleaveBaseApRatio,
       combo.filter(
         (comboPart) =>
           comboPart.ability === "cleave" || comboPart.ability === "both",
@@ -533,7 +528,6 @@ function getEfficiencyTables(
     ),
     spiritBombApRatios: getSpiritBombApRatios(
       season,
-      spiritBombBaseApRatios,
       combo.filter(
         (comboPart) =>
           comboPart.ability === "bomb" || comboPart.ability === "both",
@@ -543,35 +537,30 @@ function getEfficiencyTables(
 }
 
 function enhanceSeason(season: Season): EnhancedSeason {
-  const soulCleaveBaseApRatio: EfficientMultiplierResult =
+  const baselineSoulCleaveApRatio: EfficientMultiplierResult =
     getSoulCleaveBaseApRatio(season);
   const spiritBombBaseApRatioPerSoulFragment =
     getSpiritBombBaseApRatioPerSoulFragment(season);
-  const spiritBombBaseApRatios = getSpiritBombBaseApRatios(
+  const baselineSpiritBombApRatios = getSpiritBombBaseApRatios(
     season,
     spiritBombBaseApRatioPerSoulFragment,
   );
 
-  const efficiencyTables: EfficiencyTable[] = [
-    {
-      id: "baseline",
-      title: "Baseline",
-      description:
-        "Effective AP ratios in single target with no additional talents or multipliers",
-      soulCleaveApRatio: soulCleaveBaseApRatio,
-      spiritBombApRatios: spiritBombBaseApRatios,
-      conditionalMultipliers: [],
-    },
-    ...getEfficiencyTables(
-      season,
-      soulCleaveBaseApRatio,
-      spiritBombBaseApRatios,
-    ),
-  ];
+  const baselineEfficiencyTable: EfficiencyTable = {
+    id: "baseline",
+    title: "Baseline",
+    description:
+      "Effective AP ratios in single target with no additional talents or multipliers",
+    soulCleaveApRatio: baselineSoulCleaveApRatio,
+    spiritBombApRatios: baselineSpiritBombApRatios,
+    conditionalMultipliers: [],
+  };
 
   return {
     ...season,
-    efficiencyTables,
+    baselineSoulCleaveApRatio,
+    baselineSpiritBombApRatios,
+    baselineEfficiencyTable,
   };
 }
 

@@ -1,7 +1,8 @@
 import { invariantResponse } from "@epic-web/invariant";
-import { useLoaderData } from "@remix-run/react";
+import { Await, useLoaderData } from "@remix-run/react";
 import type { HeadersFunction, LoaderFunctionArgs } from "@vercel/remix";
-import { json } from "@vercel/remix";
+import { defer } from "@vercel/remix";
+import { Suspense } from "react";
 
 import { H1, H2, Lead } from "~/components/typography.tsx";
 import { Badge } from "~/components/ui/badge.tsx";
@@ -12,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card.tsx";
+import { Skeleton } from "~/components/ui/skeleton.tsx";
 import {
   Table,
   TableBody,
@@ -24,7 +26,10 @@ import type {
   EfficiencyTable,
   EfficientSpiritBombMultiplierResult,
 } from "~/data/seasons.ts";
-import { findEnhancedSeasonByName } from "~/data/seasons.ts";
+import {
+  findEnhancedSeasonByName,
+  getEfficiencyTables,
+} from "~/data/seasons.ts";
 import { cacheControl, serverTiming } from "~/lib/constants.ts";
 import { combineHeaders } from "~/lib/misc.ts";
 import { makeTimings } from "~/lib/timing.server.ts";
@@ -44,8 +49,13 @@ export function loader({ params }: LoaderFunctionArgs) {
 
   const timings = makeTimings(`${season.name} loader`);
 
-  return json(
-    { season },
+  return defer(
+    {
+      season,
+      efficiencyTables: new Promise<EfficiencyTable[]>((resolve) => {
+        resolve(getEfficiencyTables(season));
+      }),
+    },
     {
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
       headers: combineHeaders({ [serverTiming]: timings.toString() }),
@@ -75,6 +85,26 @@ export function ErrorBoundary() {
   );
 }
 
+function SoulCleaveTableRowSkeleton() {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="font-medium">Soul Cleave</div>
+        <div className="hidden text-sm text-muted-foreground md:inline">
+          <Skeleton className="h-4 w-[250px]" />
+        </div>
+      </TableCell>
+      <TableCell className="hidden sm:table-cell" />
+      <TableCell className="hidden sm:table-cell text-right">
+        <Skeleton className="h-4 w-[100px]" />
+      </TableCell>
+      <TableCell className="text-right">
+        <Skeleton className="h-4 w-[100px]" />
+      </TableCell>
+    </TableRow>
+  );
+}
+
 function SoulCleaveTableRow({
   efficiencyTable,
 }: {
@@ -94,6 +124,34 @@ function SoulCleaveTableRow({
       </TableCell>
       <TableCell className="text-right">
         {efficiencyTable.soulCleaveApRatio.valuePerFury.toPrecision(5)}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function SpiritBombTableRowSkeleton({
+  soulFragments,
+}: {
+  soulFragments: number;
+}) {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="font-medium">
+          Spirit Bomb at {String(soulFragments)} Soul Fragments
+        </div>
+        <div className="hidden text-sm text-muted-foreground md:inline">
+          <Skeleton className="h-4 w-[250px]" />
+        </div>
+      </TableCell>
+      <TableCell className="hidden text-center sm:table-cell">
+        <Skeleton className="h-4 w-[150px]" />
+      </TableCell>
+      <TableCell className="hidden text-right sm:table-cell">
+        <Skeleton className="h-4 w-[100px]" />
+      </TableCell>
+      <TableCell className="text-right">
+        <Skeleton className="h-4 w-[100px]" />
       </TableCell>
     </TableRow>
   );
@@ -133,6 +191,49 @@ function SpiritBombTableRow({
         {efficientSpiritBombMultiplierResult.valuePerFury.toPrecision(5)}
       </TableCell>
     </TableRow>
+  );
+}
+
+function EfficiencyTableCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="px-7">
+        <CardTitle>
+          <Skeleton className="h-4 w-[300px]" />
+        </CardTitle>
+        <CardDescription>
+          <Skeleton className="h-4 w-[250px]" />
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Ability</TableHead>
+              <TableHead className="hidden text-center sm:table-cell">
+                Verdict
+              </TableHead>
+              <TableHead className="hidden text-right sm:table-cell">
+                AP Ratio
+              </TableHead>
+              <TableHead className="text-right">AP Ratio / Fury</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <SoulCleaveTableRowSkeleton />
+            {Array(5)
+              .fill(0)
+              .map((_, idx) => idx + 1)
+              .map((soulFragment) => (
+                <SpiritBombTableRowSkeleton
+                  soulFragments={soulFragment}
+                  key={soulFragment}
+                />
+              ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -178,7 +279,7 @@ function EfficiencyTableCard({
 }
 
 export default function SeasonRoute() {
-  const { season } = useLoaderData<typeof loader>();
+  const { season, efficiencyTables } = useLoaderData<typeof loader>();
 
   return (
     <>
@@ -190,12 +291,16 @@ export default function SeasonRoute() {
         </Lead>
       </div>
       <div className="space-y-4">
-        {season.efficiencyTables.map((efficiencyTable) => (
-          <EfficiencyTableCard
-            efficiencyTable={efficiencyTable}
-            key={efficiencyTable.id}
-          />
-        ))}
+        <EfficiencyTableCard efficiencyTable={season.baselineEfficiencyTable} />
+        <Suspense fallback={<EfficiencyTableCardSkeleton />}>
+          <Await resolve={efficiencyTables}>
+            {(tables) =>
+              tables.map((table) => (
+                <EfficiencyTableCard efficiencyTable={table} key={table.id} />
+              ))
+            }
+          </Await>
+        </Suspense>
       </div>
     </>
   );
