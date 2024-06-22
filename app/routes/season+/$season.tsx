@@ -4,35 +4,30 @@ import type { LoaderFunctionArgs } from "@vercel/remix";
 import { json } from "@vercel/remix";
 
 import { H1, H2, H3, H4, Lead, Paragraph } from "~/components/typography.tsx";
-import type {
-  AbilityMultiplier,
-  ConditionalAbilityMultiplier,
-  StackingAbilityMultiplier,
+import { Badge } from "~/components/ui/badge.tsx";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card.tsx";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table.tsx";
+import {
+  abilityMultiplierAppliedName,
+  findEnhancedSeasonByName,
+  stackingMultiplierAppliedName,
 } from "~/data/seasons.ts";
-import { findSeasonByName } from "~/data/seasons.ts";
 import { serverTiming } from "~/lib/constants.ts";
 import { combineHeaders } from "~/lib/misc.ts";
 import { makeTimings } from "~/lib/timing.server.ts";
-
-interface MultiplierResult {
-  value: number;
-  appliedMultipliers: string[];
-}
-
-function abilityMultiplierAppliedName(multiplier: AbilityMultiplier) {
-  return `${multiplier.appliedName} (${String(multiplier.value)})`;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function abilityMultiplierNotAppliedName(
-  multiplier: ConditionalAbilityMultiplier,
-) {
-  return multiplier.notAppliedName;
-}
-
-function stackingMultiplierAppliedName(multiplier: StackingAbilityMultiplier) {
-  return `${multiplier.appliedName} (${String(multiplier.value)} per stack [max ${String(multiplier.maxStacks)}])`;
-}
 
 export function loader({ params }: LoaderFunctionArgs) {
   invariantResponse(
@@ -40,50 +35,13 @@ export function loader({ params }: LoaderFunctionArgs) {
     "Missing season parameter",
   );
 
-  const season = findSeasonByName(params.season);
+  const season = findEnhancedSeasonByName(params.season);
   invariantResponse(season, "Unable to find season by provided name");
 
   const timings = makeTimings(`${season.name} loader`);
 
-  const soulCleaveBaseApRatio = season.alwaysOnMultipliers
-    .filter((it) => it.ability === "cleave" || it.ability === "both")
-    .reduce<MultiplierResult>(
-      (acc, multiplier) => ({
-        value: acc.value * multiplier.value,
-        appliedMultipliers: [
-          ...acc.appliedMultipliers,
-          abilityMultiplierAppliedName(multiplier),
-        ],
-      }),
-      {
-        value: season.apRatios.soulCleave,
-        appliedMultipliers: [],
-      },
-    );
-  const spiritBombBaseApRatioPerSoulFragment = season.alwaysOnMultipliers
-    .filter((it) => it.ability === "bomb" || it.ability === "both")
-    .reduce<MultiplierResult>(
-      (acc, multiplier) => ({
-        value: acc.value * multiplier.value,
-        appliedMultipliers: [
-          ...acc.appliedMultipliers,
-          abilityMultiplierAppliedName(multiplier),
-        ],
-      }),
-      {
-        value: season.apRatios.spiritBombPerSoulFragment,
-        appliedMultipliers: [],
-      },
-    );
-
-  const enhancedSeason = {
-    ...season,
-    soulCleaveBaseApRatio,
-    spiritBombBaseApRatioPerSoulFragment,
-  };
-
   return json(
-    { season: enhancedSeason },
+    { season },
     {
       // eslint-disable-next-line @typescript-eslint/no-base-to-string
       headers: combineHeaders({ [serverTiming]: timings.toString() }),
@@ -125,106 +83,167 @@ export default function SeasonRoute() {
           {season.description}.
         </Lead>
       </div>
-      <section className="pb-8 space-y-3">
-        <div className="space-y-2">
-          <H2>Soul Cleave</H2>
-          <Lead>Base AP Ratio: {season.apRatios.soulCleave}</Lead>
-          <Lead>Effective AP Ratio: {season.soulCleaveBaseApRatio.value}</Lead>
-        </div>
-        <div className="space-y-2">
-          <H3>Applied Multipliers</H3>
-          <Paragraph>
-            {season.soulCleaveBaseApRatio.appliedMultipliers.join(", ")}
-          </Paragraph>
-        </div>
-        <div className="space-y-2">
-          <H3>Available Multipliers</H3>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="px-7">
+            <CardTitle>Baseline</CardTitle>
+            <CardDescription>
+              Effective AP ratios in single target with no conditional
+              multipliers
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ability</TableHead>
+                  <TableHead className="hidden text-center sm:table-cell ">
+                    Verdict
+                  </TableHead>
+                  <TableHead className="text-right">AP Ratio</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium">Soul Cleave</TableCell>
+                  <TableCell className="hidden sm:table-cell" />
+                  <TableCell className="text-right">
+                    {season.soulCleaveBaseApRatio.value.toPrecision(5)}
+                  </TableCell>
+                </TableRow>
+                {season.spiritBombBaseApRatios.map((apRatio) => (
+                  <TableRow
+                    key={`spirit-bomb-${String(apRatio.soulFragments)}-soul-fragments`}
+                  >
+                    <TableCell className="font-medium">
+                      Spirit Bomb at {String(apRatio.soulFragments)} Soul
+                      Fragments
+                    </TableCell>
+                    <TableCell className="hidden text-center sm:table-cell">
+                      {apRatio.value > season.soulCleaveBaseApRatio.value ? (
+                        <Badge>Use Spirit Bomb</Badge>
+                      ) : (
+                        <Badge variant="secondary">Use Soul Cleave</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {apRatio.value.toPrecision(5)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <section className="pb-8 space-y-3">
           <div className="space-y-2">
-            <H4>Always On Multipliers</H4>
+            <H2>Soul Cleave</H2>
+            <Lead>Base AP Ratio: {season.apRatios.soulCleave}</Lead>
+            <Lead>
+              Effective AP Ratio: {season.soulCleaveBaseApRatio.value}
+            </Lead>
+          </div>
+          <div className="space-y-2">
+            <H3>Applied Multipliers</H3>
             <Paragraph>
-              {season.alwaysOnMultipliers
-                .filter(
-                  (it) => it.ability === "cleave" || it.ability === "both",
-                )
-                .map(abilityMultiplierAppliedName)
-                .join(", ")}
+              {season.soulCleaveBaseApRatio.appliedMultipliers.join(", ")}
             </Paragraph>
           </div>
           <div className="space-y-2">
-            <H4>Conditional Multipliers</H4>
+            <H3>Available Multipliers</H3>
+            <div className="space-y-2">
+              <H4>Always On Multipliers</H4>
+              <Paragraph>
+                {season.alwaysOnMultipliers
+                  .filter(
+                    (it) => it.ability === "cleave" || it.ability === "both",
+                  )
+                  .map(abilityMultiplierAppliedName)
+                  .join(", ")}
+              </Paragraph>
+            </div>
+            <div className="space-y-2">
+              <H4>Conditional Multipliers</H4>
+              <Paragraph>
+                {season.conditionalMultipliers
+                  .filter(
+                    (it) => it.ability === "cleave" || it.ability === "both",
+                  )
+                  .map(abilityMultiplierAppliedName)
+                  .join(", ")}
+              </Paragraph>
+            </div>
+            <div className="space-y-2">
+              <H4>Stacking Multipliers</H4>
+              <Paragraph>
+                {season.stackingMultipliers
+                  .filter(
+                    (it) => it.ability === "cleave" || it.ability === "both",
+                  )
+                  .map(stackingMultiplierAppliedName)
+                  .join(", ")}
+              </Paragraph>
+            </div>
+          </div>
+        </section>
+        <section className="pb-8 space-y-3">
+          <div className="space-y-2">
+            <H2>Spirit Bomb</H2>
+            <Lead>
+              Base AP Ratio per Soul Fragment:{" "}
+              {season.apRatios.spiritBombPerSoulFragment}
+            </Lead>
+            <Lead>
+              Effective AP Ratio per Soul Fragment:{" "}
+              {season.spiritBombBaseApRatioPerSoulFragment.value}
+            </Lead>
+          </div>
+          <div className="space-y-2">
+            <H3>Applied Multipliers</H3>
             <Paragraph>
-              {season.conditionalMultipliers
-                .filter(
-                  (it) => it.ability === "cleave" || it.ability === "both",
-                )
-                .map(abilityMultiplierAppliedName)
-                .join(", ")}
+              {season.spiritBombBaseApRatioPerSoulFragment.appliedMultipliers.join(
+                ", ",
+              )}
             </Paragraph>
           </div>
           <div className="space-y-2">
-            <H4>Stacking Multipliers</H4>
-            <Paragraph>
-              {season.stackingMultipliers
-                .filter(
-                  (it) => it.ability === "cleave" || it.ability === "both",
-                )
-                .map(stackingMultiplierAppliedName)
-                .join(", ")}
-            </Paragraph>
+            <H3>Available Multipliers</H3>
+            <div className="space-y-2">
+              <H4>Always On Multipliers</H4>
+              <Paragraph>
+                {season.alwaysOnMultipliers
+                  .filter(
+                    (it) => it.ability === "bomb" || it.ability === "both",
+                  )
+                  .map(abilityMultiplierAppliedName)
+                  .join(", ")}
+              </Paragraph>
+            </div>
+            <div className="space-y-2">
+              <H4>Conditional Multipliers</H4>
+              <Paragraph>
+                {season.conditionalMultipliers
+                  .filter(
+                    (it) => it.ability === "bomb" || it.ability === "both",
+                  )
+                  .map(abilityMultiplierAppliedName)
+                  .join(", ")}
+              </Paragraph>
+            </div>
+            <div className="space-y-2">
+              <H4>Stacking Multipliers</H4>
+              <Paragraph>
+                {season.stackingMultipliers
+                  .filter(
+                    (it) => it.ability === "bomb" || it.ability === "both",
+                  )
+                  .map(stackingMultiplierAppliedName)
+                  .join(", ")}
+              </Paragraph>
+            </div>
           </div>
-        </div>
-      </section>
-      <section className="pb-8 space-y-3">
-        <div className="space-y-2">
-          <H2>Spirit Bomb</H2>
-          <Lead>
-            Base AP Ratio per Soul Fragment:{" "}
-            {season.apRatios.spiritBombPerSoulFragment}
-          </Lead>
-          <Lead>
-            Effective AP Ratio per Soul Fragment:{" "}
-            {season.spiritBombBaseApRatioPerSoulFragment.value}
-          </Lead>
-        </div>
-        <div className="space-y-2">
-          <H3>Applied Multipliers</H3>
-          <Paragraph>
-            {season.spiritBombBaseApRatioPerSoulFragment.appliedMultipliers.join(
-              ", ",
-            )}
-          </Paragraph>
-        </div>
-        <div className="space-y-2">
-          <H3>Available Multipliers</H3>
-          <div className="space-y-2">
-            <H4>Always On Multipliers</H4>
-            <Paragraph>
-              {season.alwaysOnMultipliers
-                .filter((it) => it.ability === "bomb" || it.ability === "both")
-                .map(abilityMultiplierAppliedName)
-                .join(", ")}
-            </Paragraph>
-          </div>
-          <div className="space-y-2">
-            <H4>Conditional Multipliers</H4>
-            <Paragraph>
-              {season.conditionalMultipliers
-                .filter((it) => it.ability === "bomb" || it.ability === "both")
-                .map(abilityMultiplierAppliedName)
-                .join(", ")}
-            </Paragraph>
-          </div>
-          <div className="space-y-2">
-            <H4>Stacking Multipliers</H4>
-            <Paragraph>
-              {season.stackingMultipliers
-                .filter((it) => it.ability === "bomb" || it.ability === "both")
-                .map(stackingMultiplierAppliedName)
-                .join(", ")}
-            </Paragraph>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </>
   );
 }
