@@ -38,6 +38,10 @@ export interface Season {
     soulCleave: number;
     spiritBombPerSoulFragment: number;
   };
+  furyCost: {
+    soulCleave: number;
+    spiritBomb: number;
+  };
   alwaysOnMultipliers: AbilityMultiplier[];
   conditionalMultipliers: ConditionalAbilityMultiplier[];
   stackingMultipliers: StackingAbilityMultiplier[];
@@ -56,6 +60,10 @@ export const seasons: readonly Season[] = [
     apRatios: {
       soulCleave: 1.4812,
       spiritBombPerSoulFragment: 0.35041,
+    },
+    furyCost: {
+      soulCleave: 30,
+      spiritBomb: 40,
     },
     alwaysOnMultipliers: [
       {
@@ -109,6 +117,10 @@ export const seasons: readonly Season[] = [
     apRatios: {
       soulCleave: 1.4812,
       spiritBombPerSoulFragment: 0.35041,
+    },
+    furyCost: {
+      soulCleave: 30,
+      spiritBomb: 40,
     },
     alwaysOnMultipliers: [
       {
@@ -169,6 +181,10 @@ export const seasons: readonly Season[] = [
       soulCleave: 1.61,
       spiritBombPerSoulFragment: 0.35041,
     },
+    furyCost: {
+      soulCleave: 30,
+      spiritBomb: 40,
+    },
     alwaysOnMultipliers: [
       {
         ability: "bomb",
@@ -227,6 +243,10 @@ export const seasons: readonly Season[] = [
     apRatios: {
       soulCleave: 1.31,
       spiritBombPerSoulFragment: 0.32445,
+    },
+    furyCost: {
+      soulCleave: 30,
+      spiritBomb: 40,
     },
     alwaysOnMultipliers: [
       {
@@ -316,9 +336,17 @@ export interface MultiplierResult {
   appliedMultipliers: string[];
 }
 
-export interface SpiritBombMultiplierResult {
-  value: number;
+export interface EfficientMultiplierResult extends MultiplierResult {
+  valuePerFury: number;
+}
+
+export interface SpiritBombMultiplierResult extends MultiplierResult {
   soulFragments: number;
+}
+
+export interface EfficientSpiritBombMultiplierResult
+  extends SpiritBombMultiplierResult {
+  valuePerFury: number;
 }
 
 export function abilityMultiplierAppliedName(multiplier: AbilityMultiplier) {
@@ -339,19 +367,19 @@ export function stackingMultiplierAppliedName(
 
 export interface CombinedMultiplierResult {
   conditionalMultipliers: ConditionalAbilityMultiplier[];
-  soulCleaveApRatio: MultiplierResult;
-  spiritBombBaseApRatios: SpiritBombMultiplierResult[];
+  soulCleaveApRatio: EfficientMultiplierResult;
+  spiritBombBaseApRatios: EfficientSpiritBombMultiplierResult[];
 }
 
 export interface EnhancedSeason extends Season {
-  soulCleaveBaseApRatio: MultiplierResult;
-  spiritBombBaseApRatioPerSoulFragment: MultiplierResult;
-  spiritBombBaseApRatios: SpiritBombMultiplierResult[];
+  soulCleaveBaseApRatio: EfficientMultiplierResult;
+  spiritBombBaseApRatioPerSoulFragment: EfficientMultiplierResult;
+  spiritBombBaseApRatios: EfficientSpiritBombMultiplierResult[];
   conditionalMultiplierResults: CombinedMultiplierResult[];
 }
 
-function enhanceSeason(season: Season): EnhancedSeason {
-  const soulCleaveBaseApRatio = season.alwaysOnMultipliers
+function getSoulCleaveBaseApRatio(season: Season): EfficientMultiplierResult {
+  const soulCleaveBaseApRatioMultiplierResult = season.alwaysOnMultipliers
     .filter((it) => it.ability === "cleave" || it.ability === "both")
     .reduce<MultiplierResult>(
       (acc, multiplier) => ({
@@ -366,7 +394,17 @@ function enhanceSeason(season: Season): EnhancedSeason {
         appliedMultipliers: [],
       },
     );
-  const spiritBombBaseApRatioPerSoulFragment = season.alwaysOnMultipliers
+  return {
+    ...soulCleaveBaseApRatioMultiplierResult,
+    valuePerFury:
+      soulCleaveBaseApRatioMultiplierResult.value / season.furyCost.soulCleave,
+  };
+}
+
+function getSpiritBombBaseApRatioPerSoulFragment(
+  season: Season,
+): EfficientMultiplierResult {
+  const spiritBombBaseApRatioPerSoulFragmentResult = season.alwaysOnMultipliers
     .filter((it) => it.ability === "bomb" || it.ability === "both")
     .reduce<MultiplierResult>(
       (acc, multiplier) => ({
@@ -381,13 +419,41 @@ function enhanceSeason(season: Season): EnhancedSeason {
         appliedMultipliers: [],
       },
     );
-  const spiritBombBaseApRatios = Array(5)
+  return {
+    ...spiritBombBaseApRatioPerSoulFragmentResult,
+    valuePerFury:
+      spiritBombBaseApRatioPerSoulFragmentResult.value /
+      season.furyCost.spiritBomb,
+  };
+}
+
+function getSpiritBombApRatios(
+  season: Season,
+  baseMultiplierResult: EfficientMultiplierResult,
+): EfficientSpiritBombMultiplierResult[] {
+  return Array(5)
     .fill(0)
     .map((_, idx) => idx + 1)
     .map<SpiritBombMultiplierResult>((soulFragments) => ({
-      value: soulFragments * spiritBombBaseApRatioPerSoulFragment.value,
+      value: soulFragments * baseMultiplierResult.value,
+      appliedMultipliers: baseMultiplierResult.appliedMultipliers,
       soulFragments,
+    }))
+    .map<EfficientSpiritBombMultiplierResult>((it) => ({
+      ...it,
+      valuePerFury: it.value / season.furyCost.spiritBomb,
     }));
+}
+
+function enhanceSeason(season: Season): EnhancedSeason {
+  const soulCleaveBaseApRatio: EfficientMultiplierResult =
+    getSoulCleaveBaseApRatio(season);
+  const spiritBombBaseApRatioPerSoulFragment =
+    getSpiritBombBaseApRatioPerSoulFragment(season);
+  const spiritBombBaseApRatios = getSpiritBombApRatios(
+    season,
+    spiritBombBaseApRatioPerSoulFragment,
+  );
 
   return {
     ...season,

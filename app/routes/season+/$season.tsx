@@ -97,37 +97,59 @@ export default function SeasonRoute() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Ability</TableHead>
-                  <TableHead className="hidden text-center sm:table-cell ">
+                  <TableHead className="hidden text-center sm:table-cell">
                     Verdict
                   </TableHead>
-                  <TableHead className="text-right">AP Ratio</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">
+                    AP Ratio
+                  </TableHead>
+                  <TableHead className="text-right">AP Ratio / Fury</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow>
-                  <TableCell className="font-medium">Soul Cleave</TableCell>
+                  <TableCell>
+                    <div className="font-medium">Soul Cleave</div>
+                    <div className="hidden text-sm text-muted-foreground md:inline">
+                      {season.soulCleaveBaseApRatio.appliedMultipliers.join(
+                        ", ",
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden sm:table-cell" />
-                  <TableCell className="text-right">
+                  <TableCell className="hidden sm:table-cell text-right">
                     {season.soulCleaveBaseApRatio.value.toPrecision(5)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {season.soulCleaveBaseApRatio.valuePerFury.toPrecision(5)}
                   </TableCell>
                 </TableRow>
                 {season.spiritBombBaseApRatios.map((apRatio) => (
                   <TableRow
                     key={`spirit-bomb-${String(apRatio.soulFragments)}-soul-fragments`}
                   >
-                    <TableCell className="font-medium">
-                      Spirit Bomb at {String(apRatio.soulFragments)} Soul
-                      Fragments
+                    <TableCell>
+                      <div className="font-medium">
+                        Spirit Bomb at {String(apRatio.soulFragments)} Soul
+                        Fragments
+                      </div>
+                      <div className="hidden text-sm text-muted-foreground md:inline">
+                        {apRatio.appliedMultipliers.join(", ")}
+                      </div>
                     </TableCell>
                     <TableCell className="hidden text-center sm:table-cell">
-                      {apRatio.value > season.soulCleaveBaseApRatio.value ? (
+                      {apRatio.valuePerFury >
+                      season.soulCleaveBaseApRatio.valuePerFury ? (
                         <Badge>Use Spirit Bomb</Badge>
                       ) : (
                         <Badge variant="secondary">Use Soul Cleave</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="hidden text-right sm:table-cell">
                       {apRatio.value.toPrecision(5)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {apRatio.valuePerFury.toPrecision(5)}
                     </TableCell>
                   </TableRow>
                 ))}
