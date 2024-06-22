@@ -557,7 +557,7 @@ function enhanceSeason(season: Season): EnhancedSeason {
       id: "baseline",
       title: "Baseline",
       description:
-        "Effective AP ratios in single target with no conditional multipliers",
+        "Effective AP ratios in single target with no additional talents or multipliers",
       soulCleaveApRatio: soulCleaveBaseApRatio,
       spiritBombApRatios: spiritBombBaseApRatios,
       conditionalMultipliers: [],
