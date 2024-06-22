@@ -316,7 +316,8 @@ export interface MultiplierResult {
   appliedMultipliers: string[];
 }
 
-export interface SpiritBombMultiplierResult extends MultiplierResult {
+export interface SpiritBombMultiplierResult {
+  value: number;
   soulFragments: number;
 }
 
@@ -336,10 +337,17 @@ export function stackingMultiplierAppliedName(
   return `${multiplier.appliedName} (${String(multiplier.value)} per stack [max ${String(multiplier.maxStacks)}])`;
 }
 
+export interface CombinedMultiplierResult {
+  conditionalMultipliers: ConditionalAbilityMultiplier[];
+  soulCleaveApRatio: MultiplierResult;
+  spiritBombBaseApRatios: SpiritBombMultiplierResult[];
+}
+
 export interface EnhancedSeason extends Season {
   soulCleaveBaseApRatio: MultiplierResult;
   spiritBombBaseApRatioPerSoulFragment: MultiplierResult;
   spiritBombBaseApRatios: SpiritBombMultiplierResult[];
+  conditionalMultiplierResults: CombinedMultiplierResult[];
 }
 
 function enhanceSeason(season: Season): EnhancedSeason {
@@ -378,9 +386,6 @@ function enhanceSeason(season: Season): EnhancedSeason {
     .map((_, idx) => idx + 1)
     .map<SpiritBombMultiplierResult>((soulFragments) => ({
       value: soulFragments * spiritBombBaseApRatioPerSoulFragment.value,
-      appliedMultipliers: [
-        ...spiritBombBaseApRatioPerSoulFragment.appliedMultipliers,
-      ],
       soulFragments,
     }));
 
@@ -389,6 +394,7 @@ function enhanceSeason(season: Season): EnhancedSeason {
     soulCleaveBaseApRatio,
     spiritBombBaseApRatioPerSoulFragment,
     spiritBombBaseApRatios,
+    conditionalMultiplierResults: [],
   };
 }
 
