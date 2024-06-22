@@ -1,6 +1,6 @@
 import { invariantResponse } from "@epic-web/invariant";
 import { useLoaderData } from "@remix-run/react";
-import type { LoaderFunctionArgs } from "@vercel/remix";
+import type { HeadersFunction, LoaderFunctionArgs } from "@vercel/remix";
 import { json } from "@vercel/remix";
 
 import { H1, H2, Lead } from "~/components/typography.tsx";
@@ -25,9 +25,13 @@ import type {
   EfficientSpiritBombMultiplierResult,
 } from "~/data/seasons.ts";
 import { findEnhancedSeasonByName } from "~/data/seasons.ts";
-import { serverTiming } from "~/lib/constants.ts";
+import { cacheControl, serverTiming } from "~/lib/constants.ts";
 import { combineHeaders } from "~/lib/misc.ts";
 import { makeTimings } from "~/lib/timing.server.ts";
+
+export const headers: HeadersFunction = () => ({
+  [cacheControl]: "s-maxage=1, stale-while-revalidate=59",
+});
 
 export function loader({ params }: LoaderFunctionArgs) {
   invariantResponse(
