@@ -1,3 +1,5 @@
+import fastCartesian from "fast-cartesian";
+
 const UNKNOWN_SEASON_START_OR_ENDING = null;
 
 export type AlternativeTooltipSource = "ptr" | "beta";
@@ -375,7 +377,7 @@ export interface EfficiencyTable {
   id: string;
   title: string;
   description: string;
-  conditionalMultipliers: ConditionalAbilityMultiplier[];
+  conditionalMultipliers: AbilityMultiplier[];
   soulCleaveApRatio: EfficientMultiplierResult;
   spiritBombApRatios: EfficientSpiritBombMultiplierResult[];
 }
@@ -433,7 +435,7 @@ function getSpiritBombBaseApRatioPerSoulFragment(
   };
 }
 
-function getSpiritBombApRatios(
+function getSpiritBombBaseApRatios(
   season: Season,
   baseMultiplierResult: EfficientMultiplierResult,
 ): EfficientSpiritBombMultiplierResult[] {
@@ -451,12 +453,95 @@ function getSpiritBombApRatios(
     }));
 }
 
+function getSoulCleaveApRatio(
+  season: Season,
+  soulCleaveBaseApRatio: EfficientMultiplierResult,
+  multipliers: AbilityMultiplier[],
+): EfficientMultiplierResult {
+  const result = multipliers.reduce<MultiplierResult>(
+    (acc, multiplier) => ({
+      value: acc.value * multiplier.value,
+      appliedMultipliers: [...acc.appliedMultipliers, multiplier.appliedName],
+    }),
+    soulCleaveBaseApRatio,
+  );
+
+  return {
+    ...result,
+    valuePerFury: result.value / season.furyCost.soulCleave,
+  };
+}
+
+function getSpiritBombApRatios(
+  season: Season,
+  spiritBombBaseApRatios: EfficientSpiritBombMultiplierResult[],
+  multipliers: AbilityMultiplier[],
+): EfficientSpiritBombMultiplierResult[] {
+  return spiritBombBaseApRatios.map((spiritBombBaseApRatio) => {
+    const result = multipliers.reduce<SpiritBombMultiplierResult>(
+      (acc, multiplier) => ({
+        value: acc.value * multiplier.value,
+        appliedMultipliers: [...acc.appliedMultipliers, multiplier.appliedName],
+        soulFragments: acc.soulFragments,
+      }),
+      spiritBombBaseApRatio,
+    );
+
+    return {
+      ...result,
+      valuePerFury: result.value / season.furyCost.spiritBomb,
+    };
+  });
+}
+
+function getEfficiencyTables(
+  season: Season,
+  soulCleaveBaseApRatio: EfficientMultiplierResult,
+  spiritBombBaseApRatios: EfficientSpiritBombMultiplierResult[],
+): EfficiencyTable[] {
+  return fastCartesian(
+    season.conditionalMultipliers.map<AbilityMultiplier[]>((multiplier) => [
+      {
+        ability: multiplier.ability,
+        appliedName: multiplier.appliedName,
+        value: multiplier.value,
+      },
+      {
+        ability: multiplier.ability,
+        appliedName: multiplier.notAppliedName,
+        value: 1,
+      },
+    ]),
+  ).map<EfficiencyTable>((combo) => ({
+    id: combo.map((comboPart) => comboPart.appliedName).join("-"),
+    title: combo.map((comboPart) => comboPart.appliedName).join(" + "),
+    description: `Effective AP ratios in single target with ${combo.map((comboPart) => comboPart.appliedName).join(", ")}`,
+    conditionalMultipliers: combo,
+    soulCleaveApRatio: getSoulCleaveApRatio(
+      season,
+      soulCleaveBaseApRatio,
+      combo.filter(
+        (comboPart) =>
+          comboPart.ability === "cleave" || comboPart.ability === "both",
+      ),
+    ),
+    spiritBombApRatios: getSpiritBombApRatios(
+      season,
+      spiritBombBaseApRatios,
+      combo.filter(
+        (comboPart) =>
+          comboPart.ability === "bomb" || comboPart.ability === "both",
+      ),
+    ),
+  }));
+}
+
 function enhanceSeason(season: Season): EnhancedSeason {
   const soulCleaveBaseApRatio: EfficientMultiplierResult =
     getSoulCleaveBaseApRatio(season);
   const spiritBombBaseApRatioPerSoulFragment =
     getSpiritBombBaseApRatioPerSoulFragment(season);
-  const spiritBombBaseApRatios = getSpiritBombApRatios(
+  const spiritBombBaseApRatios = getSpiritBombBaseApRatios(
     season,
     spiritBombBaseApRatioPerSoulFragment,
   );
@@ -471,6 +556,11 @@ function enhanceSeason(season: Season): EnhancedSeason {
       spiritBombApRatios: spiritBombBaseApRatios,
       conditionalMultipliers: [],
     },
+    ...getEfficiencyTables(
+      season,
+      soulCleaveBaseApRatio,
+      spiritBombBaseApRatios,
+    ),
   ];
 
   return {
