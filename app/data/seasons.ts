@@ -310,3 +310,122 @@ export function findSeasonByName(slug: string): Season | null {
 
   return match ?? null;
 }
+
+export interface MultiplierResult {
+  value: number;
+  appliedMultipliers: string[];
+}
+
+export interface SpiritBombMultiplierResult extends MultiplierResult {
+  soulFragments: number;
+}
+
+export function abilityMultiplierAppliedName(multiplier: AbilityMultiplier) {
+  return `${multiplier.appliedName} (${String(multiplier.value)})`;
+}
+
+export function abilityMultiplierNotAppliedName(
+  multiplier: ConditionalAbilityMultiplier,
+) {
+  return multiplier.notAppliedName;
+}
+
+export function stackingMultiplierAppliedName(
+  multiplier: StackingAbilityMultiplier,
+) {
+  return `${multiplier.appliedName} (${String(multiplier.value)} per stack [max ${String(multiplier.maxStacks)}])`;
+}
+
+export interface EnhancedSeason extends Season {
+  soulCleaveBaseApRatio: MultiplierResult;
+  spiritBombBaseApRatioPerSoulFragment: MultiplierResult;
+  spiritBombBaseApRatios: SpiritBombMultiplierResult[];
+}
+
+function enhanceSeason(season: Season): EnhancedSeason {
+  const soulCleaveBaseApRatio = season.alwaysOnMultipliers
+    .filter((it) => it.ability === "cleave" || it.ability === "both")
+    .reduce<MultiplierResult>(
+      (acc, multiplier) => ({
+        value: acc.value * multiplier.value,
+        appliedMultipliers: [
+          ...acc.appliedMultipliers,
+          abilityMultiplierAppliedName(multiplier),
+        ],
+      }),
+      {
+        value: season.apRatios.soulCleave,
+        appliedMultipliers: [],
+      },
+    );
+  const spiritBombBaseApRatioPerSoulFragment = season.alwaysOnMultipliers
+    .filter((it) => it.ability === "bomb" || it.ability === "both")
+    .reduce<MultiplierResult>(
+      (acc, multiplier) => ({
+        value: acc.value * multiplier.value,
+        appliedMultipliers: [
+          ...acc.appliedMultipliers,
+          abilityMultiplierAppliedName(multiplier),
+        ],
+      }),
+      {
+        value: season.apRatios.spiritBombPerSoulFragment,
+        appliedMultipliers: [],
+      },
+    );
+  const spiritBombBaseApRatios = Array(5)
+    .fill(0)
+    .map((_, idx) => idx + 1)
+    .map<SpiritBombMultiplierResult>((soulFragments) => ({
+      value: soulFragments * spiritBombBaseApRatioPerSoulFragment.value,
+      appliedMultipliers: [
+        ...spiritBombBaseApRatioPerSoulFragment.appliedMultipliers,
+      ],
+      soulFragments,
+    }));
+
+  return {
+    ...season,
+    soulCleaveBaseApRatio,
+    spiritBombBaseApRatioPerSoulFragment,
+    spiritBombBaseApRatios,
+  };
+}
+
+export const enhancedSeasons = seasons.map(enhanceSeason);
+
+export function findEnhancedSeasonByTimestamp(
+  timestamp = Date.now(),
+): EnhancedSeason | null {
+  const season = enhancedSeasons.find(
+    (season) =>
+      season.startDate &&
+      timestamp >= season.startDate &&
+      (season.endDate === UNKNOWN_SEASON_START_OR_ENDING ||
+        season.endDate > timestamp),
+  );
+
+  return season ?? null;
+}
+
+export function findEnhancedSeasonByName(slug: string): EnhancedSeason | null {
+  if (slug === "latest") {
+    const ongoingSeason = findEnhancedSeasonByTimestamp();
+
+    if (ongoingSeason) return ongoingSeason;
+
+    const mostRecentlyStartedSeason = enhancedSeasons.find(
+      (season) =>
+        season.startDate !== UNKNOWN_SEASON_START_OR_ENDING &&
+        Date.now() >= season.startDate,
+    );
+
+    if (mostRecentlyStartedSeason) return mostRecentlyStartedSeason;
+  }
+
+  const match = enhancedSeasons.find((season) => {
+    return season.slug === slug;
+  });
+
+  return match ?? null;
+}
