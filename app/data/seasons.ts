@@ -461,7 +461,10 @@ function getSoulCleaveApRatio(
   const result = multipliers.reduce<MultiplierResult>(
     (acc, multiplier) => ({
       value: acc.value * multiplier.value,
-      appliedMultipliers: [...acc.appliedMultipliers, multiplier.appliedName],
+      appliedMultipliers: [
+        ...acc.appliedMultipliers,
+        abilityMultiplierAppliedName(multiplier),
+      ],
     }),
     soulCleaveBaseApRatio,
   );
@@ -481,7 +484,10 @@ function getSpiritBombApRatios(
     const result = multipliers.reduce<SpiritBombMultiplierResult>(
       (acc, multiplier) => ({
         value: acc.value * multiplier.value,
-        appliedMultipliers: [...acc.appliedMultipliers, multiplier.appliedName],
+        appliedMultipliers: [
+          ...acc.appliedMultipliers,
+          abilityMultiplierAppliedName(multiplier),
+        ],
         soulFragments: acc.soulFragments,
       }),
       spiritBombBaseApRatio,
