@@ -371,11 +371,17 @@ export interface CombinedMultiplierResult {
   spiritBombBaseApRatios: EfficientSpiritBombMultiplierResult[];
 }
 
+export interface EfficiencyTable {
+  id: string;
+  title: string;
+  description: string;
+  conditionalMultipliers: ConditionalAbilityMultiplier[];
+  soulCleaveApRatio: EfficientMultiplierResult;
+  spiritBombApRatios: EfficientSpiritBombMultiplierResult[];
+}
+
 export interface EnhancedSeason extends Season {
-  soulCleaveBaseApRatio: EfficientMultiplierResult;
-  spiritBombBaseApRatioPerSoulFragment: EfficientMultiplierResult;
-  spiritBombBaseApRatios: EfficientSpiritBombMultiplierResult[];
-  conditionalMultiplierResults: CombinedMultiplierResult[];
+  efficiencyTables: EfficiencyTable[];
 }
 
 function getSoulCleaveBaseApRatio(season: Season): EfficientMultiplierResult {
@@ -455,12 +461,21 @@ function enhanceSeason(season: Season): EnhancedSeason {
     spiritBombBaseApRatioPerSoulFragment,
   );
 
+  const efficiencyTables: EfficiencyTable[] = [
+    {
+      id: "baseline",
+      title: "Baseline",
+      description:
+        "Effective AP ratios in single target with no conditional multipliers",
+      soulCleaveApRatio: soulCleaveBaseApRatio,
+      spiritBombApRatios: spiritBombBaseApRatios,
+      conditionalMultipliers: [],
+    },
+  ];
+
   return {
     ...season,
-    soulCleaveBaseApRatio,
-    spiritBombBaseApRatioPerSoulFragment,
-    spiritBombBaseApRatios,
-    conditionalMultiplierResults: [],
+    efficiencyTables,
   };
 }
 

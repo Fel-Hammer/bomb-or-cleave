@@ -3,7 +3,7 @@ import { useLoaderData } from "@remix-run/react";
 import type { LoaderFunctionArgs } from "@vercel/remix";
 import { json } from "@vercel/remix";
 
-import { H1, H2, H3, H4, Lead, Paragraph } from "~/components/typography.tsx";
+import { H1, H2, Lead } from "~/components/typography.tsx";
 import { Badge } from "~/components/ui/badge.tsx";
 import {
   Card,
@@ -20,11 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table.tsx";
-import {
-  abilityMultiplierAppliedName,
-  findEnhancedSeasonByName,
-  stackingMultiplierAppliedName,
+import type {
+  EfficiencyTable,
+  EfficientSpiritBombMultiplierResult,
 } from "~/data/seasons.ts";
+import { findEnhancedSeasonByName } from "~/data/seasons.ts";
 import { serverTiming } from "~/lib/constants.ts";
 import { combineHeaders } from "~/lib/misc.ts";
 import { makeTimings } from "~/lib/timing.server.ts";
@@ -71,6 +71,108 @@ export function ErrorBoundary() {
   );
 }
 
+function SoulCleaveTableRow({
+  efficiencyTable,
+}: {
+  efficiencyTable: EfficiencyTable;
+}) {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="font-medium">Soul Cleave</div>
+        <div className="hidden text-sm text-muted-foreground md:inline">
+          {efficiencyTable.soulCleaveApRatio.appliedMultipliers.join(", ")}
+        </div>
+      </TableCell>
+      <TableCell className="hidden sm:table-cell" />
+      <TableCell className="hidden sm:table-cell text-right">
+        {efficiencyTable.soulCleaveApRatio.value.toPrecision(5)}
+      </TableCell>
+      <TableCell className="text-right">
+        {efficiencyTable.soulCleaveApRatio.valuePerFury.toPrecision(5)}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function SpiritBombTableRow({
+  efficiencyTable,
+  efficientSpiritBombMultiplierResult,
+}: {
+  efficiencyTable: EfficiencyTable;
+  efficientSpiritBombMultiplierResult: EfficientSpiritBombMultiplierResult;
+}) {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="font-medium">
+          Spirit Bomb at{" "}
+          {String(efficientSpiritBombMultiplierResult.soulFragments)} Soul
+          Fragments
+        </div>
+        <div className="hidden text-sm text-muted-foreground md:inline">
+          {efficientSpiritBombMultiplierResult.appliedMultipliers.join(", ")}
+        </div>
+      </TableCell>
+      <TableCell className="hidden text-center sm:table-cell">
+        {efficientSpiritBombMultiplierResult.valuePerFury >
+        efficiencyTable.soulCleaveApRatio.valuePerFury ? (
+          <Badge>Use Spirit Bomb</Badge>
+        ) : (
+          <Badge variant="secondary">Use Soul Cleave</Badge>
+        )}
+      </TableCell>
+      <TableCell className="hidden text-right sm:table-cell">
+        {efficientSpiritBombMultiplierResult.value.toPrecision(5)}
+      </TableCell>
+      <TableCell className="text-right">
+        {efficientSpiritBombMultiplierResult.valuePerFury.toPrecision(5)}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function EfficiencyTableCard({
+  efficiencyTable,
+}: {
+  efficiencyTable: EfficiencyTable;
+}) {
+  return (
+    <Card>
+      <CardHeader className="px-7">
+        <CardTitle>{efficiencyTable.title}</CardTitle>
+        <CardDescription>{efficiencyTable.description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Ability</TableHead>
+              <TableHead className="hidden text-center sm:table-cell">
+                Verdict
+              </TableHead>
+              <TableHead className="hidden text-right sm:table-cell">
+                AP Ratio
+              </TableHead>
+              <TableHead className="text-right">AP Ratio / Fury</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <SoulCleaveTableRow efficiencyTable={efficiencyTable} />
+            {efficiencyTable.spiritBombApRatios.map((apRatio) => (
+              <SpiritBombTableRow
+                efficiencyTable={efficiencyTable}
+                efficientSpiritBombMultiplierResult={apRatio}
+                key={`spirit-bomb-${String(apRatio.soulFragments)}-soul-fragments`}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SeasonRoute() {
   const { season } = useLoaderData<typeof loader>();
 
@@ -84,187 +186,12 @@ export default function SeasonRoute() {
         </Lead>
       </div>
       <div className="space-y-4">
-        <Card>
-          <CardHeader className="px-7">
-            <CardTitle>Baseline</CardTitle>
-            <CardDescription>
-              Effective AP ratios in single target with no conditional
-              multipliers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ability</TableHead>
-                  <TableHead className="hidden text-center sm:table-cell">
-                    Verdict
-                  </TableHead>
-                  <TableHead className="hidden text-right sm:table-cell">
-                    AP Ratio
-                  </TableHead>
-                  <TableHead className="text-right">AP Ratio / Fury</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>
-                    <div className="font-medium">Soul Cleave</div>
-                    <div className="hidden text-sm text-muted-foreground md:inline">
-                      {season.soulCleaveBaseApRatio.appliedMultipliers.join(
-                        ", ",
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell" />
-                  <TableCell className="hidden sm:table-cell text-right">
-                    {season.soulCleaveBaseApRatio.value.toPrecision(5)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {season.soulCleaveBaseApRatio.valuePerFury.toPrecision(5)}
-                  </TableCell>
-                </TableRow>
-                {season.spiritBombBaseApRatios.map((apRatio) => (
-                  <TableRow
-                    key={`spirit-bomb-${String(apRatio.soulFragments)}-soul-fragments`}
-                  >
-                    <TableCell>
-                      <div className="font-medium">
-                        Spirit Bomb at {String(apRatio.soulFragments)} Soul
-                        Fragments
-                      </div>
-                      <div className="hidden text-sm text-muted-foreground md:inline">
-                        {apRatio.appliedMultipliers.join(", ")}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden text-center sm:table-cell">
-                      {apRatio.valuePerFury >
-                      season.soulCleaveBaseApRatio.valuePerFury ? (
-                        <Badge>Use Spirit Bomb</Badge>
-                      ) : (
-                        <Badge variant="secondary">Use Soul Cleave</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden text-right sm:table-cell">
-                      {apRatio.value.toPrecision(5)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {apRatio.valuePerFury.toPrecision(5)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <section className="pb-8 space-y-3">
-          <div className="space-y-2">
-            <H2>Soul Cleave</H2>
-            <Lead>Base AP Ratio: {season.apRatios.soulCleave}</Lead>
-            <Lead>
-              Effective AP Ratio: {season.soulCleaveBaseApRatio.value}
-            </Lead>
-          </div>
-          <div className="space-y-2">
-            <H3>Applied Multipliers</H3>
-            <Paragraph>
-              {season.soulCleaveBaseApRatio.appliedMultipliers.join(", ")}
-            </Paragraph>
-          </div>
-          <div className="space-y-2">
-            <H3>Available Multipliers</H3>
-            <div className="space-y-2">
-              <H4>Always On Multipliers</H4>
-              <Paragraph>
-                {season.alwaysOnMultipliers
-                  .filter(
-                    (it) => it.ability === "cleave" || it.ability === "both",
-                  )
-                  .map(abilityMultiplierAppliedName)
-                  .join(", ")}
-              </Paragraph>
-            </div>
-            <div className="space-y-2">
-              <H4>Conditional Multipliers</H4>
-              <Paragraph>
-                {season.conditionalMultipliers
-                  .filter(
-                    (it) => it.ability === "cleave" || it.ability === "both",
-                  )
-                  .map(abilityMultiplierAppliedName)
-                  .join(", ")}
-              </Paragraph>
-            </div>
-            <div className="space-y-2">
-              <H4>Stacking Multipliers</H4>
-              <Paragraph>
-                {season.stackingMultipliers
-                  .filter(
-                    (it) => it.ability === "cleave" || it.ability === "both",
-                  )
-                  .map(stackingMultiplierAppliedName)
-                  .join(", ")}
-              </Paragraph>
-            </div>
-          </div>
-        </section>
-        <section className="pb-8 space-y-3">
-          <div className="space-y-2">
-            <H2>Spirit Bomb</H2>
-            <Lead>
-              Base AP Ratio per Soul Fragment:{" "}
-              {season.apRatios.spiritBombPerSoulFragment}
-            </Lead>
-            <Lead>
-              Effective AP Ratio per Soul Fragment:{" "}
-              {season.spiritBombBaseApRatioPerSoulFragment.value}
-            </Lead>
-          </div>
-          <div className="space-y-2">
-            <H3>Applied Multipliers</H3>
-            <Paragraph>
-              {season.spiritBombBaseApRatioPerSoulFragment.appliedMultipliers.join(
-                ", ",
-              )}
-            </Paragraph>
-          </div>
-          <div className="space-y-2">
-            <H3>Available Multipliers</H3>
-            <div className="space-y-2">
-              <H4>Always On Multipliers</H4>
-              <Paragraph>
-                {season.alwaysOnMultipliers
-                  .filter(
-                    (it) => it.ability === "bomb" || it.ability === "both",
-                  )
-                  .map(abilityMultiplierAppliedName)
-                  .join(", ")}
-              </Paragraph>
-            </div>
-            <div className="space-y-2">
-              <H4>Conditional Multipliers</H4>
-              <Paragraph>
-                {season.conditionalMultipliers
-                  .filter(
-                    (it) => it.ability === "bomb" || it.ability === "both",
-                  )
-                  .map(abilityMultiplierAppliedName)
-                  .join(", ")}
-              </Paragraph>
-            </div>
-            <div className="space-y-2">
-              <H4>Stacking Multipliers</H4>
-              <Paragraph>
-                {season.stackingMultipliers
-                  .filter(
-                    (it) => it.ability === "bomb" || it.ability === "both",
-                  )
-                  .map(stackingMultiplierAppliedName)
-                  .join(", ")}
-              </Paragraph>
-            </div>
-          </div>
-        </section>
+        {season.efficiencyTables.map((efficiencyTable) => (
+          <EfficiencyTableCard
+            efficiencyTable={efficiencyTable}
+            key={efficiencyTable.id}
+          />
+        ))}
       </div>
     </>
   );
