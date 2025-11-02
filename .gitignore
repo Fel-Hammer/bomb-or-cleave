@@ -16,8 +16,6 @@ node_modules
 
 dist
 
-app/generated
-
-app/components/ui/icons
+src/generated
 
 .vercel
