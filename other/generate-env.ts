@@ -20,6 +20,6 @@ async function ensureDir(path: string) {
   }
 }
 
-const pathToEnv = join(process.cwd(), "app", "generated");
+const pathToEnv = join(process.cwd(), "src", "generated");
 await ensureDir(pathToEnv);
 await writeFile(join(pathToEnv, "env.ts"), contents, "utf-8");

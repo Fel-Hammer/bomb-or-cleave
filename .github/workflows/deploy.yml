@@ -20,13 +20,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout repo
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         run: corepack enable
 
       - name: Set node
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
+        uses: actions/setup-node@v6
         with:
           cache: pnpm
           node-version: lts/*
@@ -49,13 +49,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout repo
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         run: corepack enable
 
       - name: Set node
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
+        uses: actions/setup-node@v6
         with:
           cache: pnpm
           node-version: lts/*
@@ -78,13 +78,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout repo
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         run: corepack enable
 
       - name: Set node
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
+        uses: actions/setup-node@v6
         with:
           cache: pnpm
           node-version: lts/*
