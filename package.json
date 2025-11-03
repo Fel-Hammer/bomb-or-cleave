@@ -7,15 +7,17 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "tsx other/generate-env.ts && tsgo -b && vite build",
+    "build": "tsx other/generate-env.ts && vite build",
     "dev": "vite",
     "lint": "tsgolint --tsconfig tsconfig.app.json && tsgolint --tsconfig tsconfig.node.json",
     "prepare": "simple-git-hooks",
     "preview": "vite preview",
     "test": "vitest --passWithNoTests",
-    "typecheck": "tsgo"
+    "typecheck": "tsr generate && tsgo"
   },
   "dependencies": {
+    "@tanstack/react-router": "1.134.9",
+    "@tanstack/react-router-devtools": "1.134.9",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
@@ -23,6 +25,8 @@
     "@dotenvx/dotenvx": "1.51.0",
     "@prettier/plugin-oxc": "0.0.4",
     "@tailwindcss/vite": "4.1.16",
+    "@tanstack/router-cli": "1.134.9",
+    "@tanstack/router-plugin": "1.134.9",
     "@total-typescript/ts-reset": "0.6.1",
     "@types/node": "24.9.2",
     "@types/react": "19.2.2",
@@ -37,7 +41,6 @@
     "tailwindcss": "4.1.16",
     "tsx": "4.20.6",
     "vite": "npm:rolldown-vite@7.1.20",
-    "vite-tsconfig-paths": "5.1.4",
     "vitest": "4.0.6"
   },
   "sideEffects": false,

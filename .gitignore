@@ -19,3 +19,5 @@ dist
 src/generated
 
 .vercel
+
+routeTree.gen.ts
