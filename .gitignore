@@ -18,6 +18,8 @@ dist
 
 src/generated
 
+src/components/ui/icons
+
 .vercel
 
 routeTree.gen.ts

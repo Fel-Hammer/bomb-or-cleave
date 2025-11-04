@@ -1,8 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // avoid FOUC
+      document.documentElement.classList.toggle(
+        "dark",
+        localStorage.theme === "dark" ||
+          (!("theme" in localStorage) &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches),
+      );
+    </script>
 
     <title>Bomb or Cleave</title>
     <meta property="og:url" content="https://bomb-or-cleave.vercel.app" />
@@ -62,9 +71,13 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1" />
     <link rel="manifest" href="/site.webmanifest?v=1" />
     <link rel="mask-icon" href="/favicon.svg?v=1" color="#5bbad5" />
+    <link rel="preload" href="/src/components/ui/icons/sprite.svg" as="image" />
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="overscroll-none font-sans antialiased">
+    <div
+      id="root"
+      class="bg-background relative z-10 flex min-h-svh flex-col"
+    ></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
